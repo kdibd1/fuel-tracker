@@ -1,4 +1,10 @@
-<!doctype html><html lang="en-AU"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#09111f"><title>Fuel Tracker</title><link rel="stylesheet" href="styles.css"></head><body><main class="wrap">
+<!doctype html><html lang="en-AU">
+<head>
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/png" href="icon-512.png">
+  <link rel="apple-touch-icon" href="icon-512.png">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#09111f"><title>Fuel Tracker</title><link rel="stylesheet" href="styles.css"></head><body><main class="wrap">
 <header class="brand"><div class="logo">⛽</div><div><h1>Fuel Tracker</h1><p>Every vehicle. Every tank. The real cost.</p></div><div id="sync" class="sync">Starting…</div></header>
 <section class="card"><div class="head"><h2>Kuttabul Road House</h2><button id="refreshFuel" class="secondary small">Refresh</button></div><div class="fuel-grid"><div class="price-card"><span>Diesel</span><strong id="dieselPrice">—</strong></div><div class="price-card"><span>Unleaded 91</span><strong id="u91Price">—</strong></div></div><p id="fuelUpdated" class="muted">Loading prices…</p><div class="fuel-chart"><canvas id="fuelChart"></canvas></div><div class="legend"><span>● Diesel</span><span class="blue">● U91</span></div></section>
 <section id="picker"><p class="muted">Choose a vehicle to view its dashboard or record a fill.</p><div id="legacy" class="legacy hidden"></div><div id="vehicleGrid" class="vehicle-grid"></div></section>
