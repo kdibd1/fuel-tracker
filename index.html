@@ -36,47 +36,57 @@
   </header>
 
 
-  <section class="card">
-    <div class="head">
-      <h2>Kuttabul Road House</h2>
-
-      <button
-        id="refreshFuel"
-        class="secondary small"
-        type="button"
-      >
-        Refresh
-      </button>
-    </div>
-
-    <div class="fuel-grid">
-      <div class="price-card">
-        <span>Diesel</span>
-        <strong id="dieselPrice">—</strong>
-      </div>
-
-      <div class="price-card">
-        <span>Unleaded 91</span>
-        <strong id="u91Price">—</strong>
-      </div>
-    </div>
-
-    <p id="fuelUpdated" class="muted">
-      Loading prices…
-    </p>
-
-    <div class="fuel-chart">
-      <canvas id="fuelChart"></canvas>
-    </div>
-
-    <div class="legend">
-      <span>● Diesel</span>
-      <span class="blue">● U91</span>
-    </div>
-  </section>
-
-
+  <!-- MAIN VEHICLE PICKER PAGE -->
   <section id="picker">
+
+    <!-- KUTTABUL FUEL PRICES -->
+    <section class="card">
+
+      <div class="head">
+        <h2>Kuttabul Road House</h2>
+
+        <button
+          id="refreshFuel"
+          class="secondary small"
+          type="button"
+        >
+          Refresh
+        </button>
+      </div>
+
+      <div class="fuel-grid">
+
+        <div class="price-card">
+          <span>Diesel</span>
+          <strong id="dieselPrice">—</strong>
+        </div>
+
+        <div class="price-card">
+          <span>Unleaded 91</span>
+          <strong id="u91Price">—</strong>
+        </div>
+
+      </div>
+
+      <p
+        id="fuelUpdated"
+        class="muted"
+      >
+        Loading prices…
+      </p>
+
+      <div class="fuel-chart">
+        <canvas id="fuelChart"></canvas>
+      </div>
+
+      <div class="legend">
+        <span>● Diesel</span>
+        <span class="blue">● U91</span>
+      </div>
+
+    </section>
+
+
     <p class="muted">
       Choose a vehicle to view its dashboard or record a fill.
     </p>
@@ -90,9 +100,11 @@
       id="vehicleGrid"
       class="vehicle-grid"
     ></div>
+
   </section>
 
 
+  <!-- SELECTED VEHICLE DASHBOARD -->
   <section
     id="dashboard"
     class="hidden"
@@ -128,6 +140,7 @@
     </div>
 
 
+    <!-- ADD FILL -->
     <section class="card">
 
       <h2>Add a fill</h2>
@@ -200,6 +213,7 @@
           id="result"
           class="result"
         >
+
           <div class="metrics">
 
             <div>
@@ -218,6 +232,7 @@
             </div>
 
           </div>
+
         </div>
 
 
@@ -241,6 +256,7 @@
     </section>
 
 
+    <!-- PERFORMANCE -->
     <section class="card">
 
       <h2>Performance</h2>
@@ -272,6 +288,7 @@
     </section>
 
 
+    <!-- GRAPHS / STATS -->
     <div class="insights">
 
       <section class="card">
@@ -343,6 +360,7 @@
     </div>
 
 
+    <!-- SERVICE LOG -->
     <section class="card">
 
       <div class="head">
@@ -373,6 +391,7 @@
     </section>
 
 
+    <!-- FILL HISTORY -->
     <section class="card">
 
       <div class="head">
@@ -403,6 +422,7 @@
 </main>
 
 
+<!-- SERVICE DIALOG -->
 <dialog id="serviceDialog">
 
   <form
@@ -466,6 +486,7 @@
 </dialog>
 
 
+<!-- VEHICLE SETTINGS DIALOG -->
 <dialog id="vDialog">
 
   <form
@@ -535,6 +556,7 @@
   id="toast"
   class="toast"
 ></div>
+
 
 <script src="config.js"></script>
 <script src="app.js"></script>
