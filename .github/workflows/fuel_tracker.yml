@@ -1,44 +1,33 @@
 name: Kuttabul Fuel Tracker
-
 on:
-  schedule:
-    - cron: "17 * * * *"
   workflow_dispatch:
-
+  schedule:
+    - cron: '17 * * * *'
 permissions:
   contents: write
-
 jobs:
   collect-price:
     runs-on: ubuntu-latest
-
     steps:
       - name: Get repository
         uses: actions/checkout@v4
-
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.13"
-
+          python-version: '3.13'
       - name: Install Python packages
         run: pip install requests pandas matplotlib
-
       - name: Check fuel prices
         env:
           FUEL_API_TOKEN: ${{ secrets.FUEL_API_TOKEN }}
         run: python fuel_tracker.py
-
       - name: Make graph
         run: python make_graph.py
-
       - name: Save price history and graph
         run: |
           git config user.name "Fuel Tracker"
           git config user.email "fuel-tracker@users.noreply.github.com"
-
           git add fuel_history.csv fuel_prices.png
-
           if git diff --cached --quiet; then
             echo "No changes to save."
           else
