@@ -12,5 +12,34 @@
 <section class="card"><h2>Add a fill</h2><form id="fillForm"><div class="form-grid"><label>Fill date<input id="date" type="date" required></label><label>Odometer (km) <small>optional</small><input id="odo" type="number" min="0" step=".1"></label><label>Distance since last fill (km)<input id="distance" type="number" min=".1" step=".1" required></label><label>Litres added<input id="litres" type="number" min=".01" step=".01" required></label><label class="wide">Fuel price (AUD per litre)<input id="price" type="number" min=".001" step=".001" required></label></div><div id="result" class="result"><div class="metrics"><div><strong id="rUse">—</strong><span>L/100 km</span></div><div><strong id="rRate">—</strong><span>$/100 km</span></div><div><strong id="rCost">—</strong><span>fill cost</span></div></div></div><div class="actions"><button class="primary">Save fill</button><button class="secondary" type="reset">Reset</button></div></form></section>
 <section class="card"><h2>Performance</h2><div class="stats"><div class="feature"><strong id="avgUse">—</strong><span>weighted avg L/100 km</span></div><div class="feature"><strong id="rolling">—</strong><span>latest 3-fill average</span></div><div><strong id="best">—</strong><span>best tank</span></div><div><strong id="worst">—</strong><span>worst tank</span></div></div></section>
 <div class="insights"><section class="card"><h2>Consumption trend</h2><div class="chart"><canvas id="chart"></canvas></div><div class="legend"><span>● Tank</span><span class="blue">● 3-fill average</span></div></section><section class="card"><h2>Fuel &amp; cost statistics</h2><div class="stats"><div><strong id="avgRate">—</strong><span>avg $/100 km</span></div><div><strong id="spend">$0.00</strong><span>total spend</span></div><div><strong id="avgPrice">—</strong><span>avg fuel price</span></div><div><strong id="avgFill">—</strong><span>avg fill cost</span></div><div><strong id="totalKm">0 km</strong><span>distance tracked</span></div><div><strong id="totalL">0 L</strong><span>total litres</span></div><div><strong id="lastOdo">—</strong><span>latest odometer</span></div><div><strong id="costKm">—</strong><span>cost per km</span></div></div></section></div>
-<section class="card"><div class="head"><h2>Fill history</h2><button id="clear" class="text red">Clear fills</button></div><div id="history"></div></section></section><footer>Synced with Supabase and cached locally for offline use.</footer></main>
-<dialog id="vDialog"><form id="vForm" class="modal"><h2 id="dialogTitle">Add vehicle</h2><input id="editId" type="hidden"><label>Registration (rego)<input id="rego" maxlength="12" required></label><label>Vehicle nickname <small>optional</small><input id="nickname" maxlength="40"></label><div class="actions"><button class="primary">Save vehicle</button><button id="cancel" class="secondary" type="button">Cancel</button></div><button id="deleteVehicle" class="text red hidden" type="button">Delete this vehicle</button></form></dialog><div id="toast" class="toast"></div><script src="config.js"></script><script src="app.js"></script></body></html>
+<section class="card">
+  <div class="head">
+    <div>
+      <h2>Service Log</h2>
+      <p id="lastService" class="muted">No services recorded yet.</p>
+    </div>
+    <button id="addService" class="secondary small" type="button">＋ Add service</button>
+  </div>
+
+  <div id="serviceHistory"></div>
+</section><section class="card"><div class="head"><h2>Fill history</h2><button id="clear" class="text red">Clear fills</button></div><div id="history"></div></section></section><footer>Synced with Supabase and cached locally for offline use.</footer></main>
+<input id="serviceDate" type="date" required>
+    </label>
+
+    <label>
+      Odometer (km)
+      <input id="serviceOdo" type="number" min="0" step="1" required>
+    </label>
+
+    <label>
+      Notes
+      <textarea id="serviceNote" rows="4" maxlength="1000"
+        placeholder="e.g. Engine oil + filter, checked belts"></textarea>
+    </label>
+
+    <div class="actions">
+      <button class="primary">Save service</button>
+      <button id="cancelService" class="secondary" type="button">Cancel</button>
+    </div>
+  </form>
+</dialog><dialog id="vDialog"><form id="vForm" class="modal"><h2 id="dialogTitle">Add vehicle</h2><input id="editId" type="hidden"><label>Registration (rego)<input id="rego" maxlength="12" required></label><label>Vehicle nickname <small>optional</small><input id="nickname" maxlength="40"></label><div class="actions"><button class="primary">Save vehicle</button><button id="cancel" class="secondary" type="button">Cancel</button></div><button id="deleteVehicle" class="text red hidden" type="button">Delete this vehicle</button></form></dialog><div id="toast" class="toast"></div><script src="config.js"></script><script src="app.js"></script></body></html>
