@@ -1,0 +1,10 @@
+create table if not exists public.vehicles (id text primary key, workspace text not null default 'default', rego text not null, nickname text, created_at timestamptz not null default now(), updated_at timestamptz not null default now());
+create table if not exists public.fill_ups (id text primary key, workspace text not null default 'default', vehicle_id text not null references public.vehicles(id) on delete cascade, fill_date date not null, distance_km numeric not null check(distance_km>0), litres numeric not null check(litres>0), price_per_litre numeric not null check(price_per_litre>0), odometer_km numeric, created_at timestamptz not null default now());
+create index if not exists vehicles_workspace_idx on public.vehicles(workspace);
+create index if not exists fill_ups_workspace_vehicle_idx on public.fill_ups(workspace,vehicle_id);
+alter table public.vehicles enable row level security;alter table public.fill_ups enable row level security;
+drop policy if exists "fuel tracker vehicles" on public.vehicles;
+drop policy if exists "fuel tracker fills" on public.fill_ups;
+create policy "fuel tracker vehicles" on public.vehicles for all to anon,authenticated using(true) with check(true);
+create policy "fuel tracker fills" on public.fill_ups for all to anon,authenticated using(true) with check(true);
+grant select,insert,update,delete on public.vehicles,public.fill_ups to anon,authenticated;
