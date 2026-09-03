@@ -27,7 +27,7 @@ jobs:
         run: |
           git config user.name "Fuel Tracker"
           git config user.email "fuel-tracker@users.noreply.github.com"
-          git add fuel_history.csv fuel_prices.png
+          git add fuel_history.csv fuel_status.json fuel_prices.png
           if git diff --cached --quiet; then
             echo "No changes to save."
           else
