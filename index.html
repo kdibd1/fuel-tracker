@@ -104,17 +104,33 @@
   </section>
 
 
-  <!-- KUTTABUL DASHBOARD SHELL -->
+  <!-- KUTTABUL FUEL DASHBOARD -->
   <section id="kuttabulDashboard" class="hidden" aria-labelledby="kuttabulTitle">
     <div class="vehicle-head">
       <div class="identity">
         <button id="backKuttabul" class="back" type="button" aria-label="Back to home">‹</button>
-        <div>
-          <h2 id="kuttabulTitle">Kuttabul Road House</h2>
-          <p>Fuel dashboard</p>
+        <div><h2 id="kuttabulTitle">Kuttabul Road House</h2><p>Fuel dashboard</p></div>
+      </div>
+      <button id="refreshKuttabul" class="secondary small" type="button">Refresh</button>
+    </div>
+    <section class="card">
+      <div class="head fuel-history-head">
+        <h2>Price history</h2>
+        <div class="fuel-ranges" role="group" aria-label="Price history period">
+          <button type="button" data-fuel-range="7D" aria-pressed="false">7D</button>
+          <button type="button" data-fuel-range="30D" aria-pressed="true">30D</button>
+          <button type="button" data-fuel-range="3M" aria-pressed="false">3M</button>
+          <button type="button" data-fuel-range="ALL" aria-pressed="false">ALL</button>
         </div>
       </div>
-    </div>
+      <p id="kuttabulUpdated" class="muted" role="status">Loading prices…</p>
+      <p id="kuttabulPeriod" class="muted"></p>
+      <div class="fuel-chart"><canvas id="kuttabulChart" role="img" aria-label="Diesel and U91 price history; statistics below"></canvas></div>
+      <div class="legend"><span>● Diesel</span><span class="blue">● U91</span></div>
+      <p class="muted">Hover or tap a point for its price and Queensland time.</p>
+    </section>
+    <div id="kuttabulStats" class="fuel-assessments" aria-live="polite"></div>
+    <p class="muted fuel-method">Cheap: bottom quarter of the period’s low–high range. Expensive: top quarter. Average: between them. The average is across logged prices, not time-weighted. Assessments describe recorded history, not a forecast.</p>
   </section>
 
 

@@ -306,6 +306,8 @@ function lineChart(
    KUTTABUL FUEL GRAPH STATE
 ========================================================= */
 
+function createFuelChart(canvasId, pointLimit) {
+
 const fuelChartState = {
   rows: [],
   points: [],
@@ -782,7 +784,7 @@ function drawFuelChart(
       : [];
 
   const c =
-    $('fuelChart');
+    $(canvasId);
 
   if (!c) {
     return;
@@ -884,7 +886,7 @@ function drawFuelChart(
           x.row.fuel ===
           'Diesel'
       )
-      .slice(-30);
+      .slice(-pointLimit);
 
   const u91 =
     valid
@@ -893,7 +895,7 @@ function drawFuelChart(
           x.row.fuel ===
           'U91'
       )
-      .slice(-30);
+      .slice(-pointLimit);
 
   const shown =
     [
@@ -1410,10 +1412,15 @@ function drawFuelChart(
    PUBLIC INTERFACE
 ========================================================= */
 
+return drawFuelChart;
+}
+
+FT.drawKuttabulChart = createFuelChart('kuttabulChart', Infinity);
+
 FT.lineChart =
   lineChart;
 
 FT.drawFuelChart =
-  drawFuelChart;
+  createFuelChart('fuelChart', 30);
 
 })();

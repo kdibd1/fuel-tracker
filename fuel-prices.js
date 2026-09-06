@@ -33,6 +33,7 @@ let fuelRows = [];
 $('openKuttabul').addEventListener('click', () => {
   $('picker').classList.add('hidden');
   $('kuttabulDashboard').classList.remove('hidden');
+  renderKuttabul();
   $('backKuttabul').focus({ preventScroll: true });
   window.scrollTo(0, 0);
 });
@@ -53,6 +54,7 @@ $('backKuttabul').addEventListener('click', () => {
 async function loadFuel() {
   $('fuelUpdated').textContent =
     'Loading prices…';
+  renderKuttabul();
 
   try {
     let statusData = null;
@@ -392,6 +394,7 @@ async function loadFuel() {
 -------------------- */
 
 function drawFuel() {
+  renderKuttabul();
   if (
     typeof FT.drawFuelChart ===
     'function'
@@ -442,6 +445,75 @@ function bindFuelRefresh() {
     };
 }
 
+
+
+/* Independent dashboard range; home chart keeps its existing data and selection. */
+let selectedRange = '30D';
+const rangeNames = { '7D': 'Past 7 days', '30D': 'Past 30 days', '3M': 'Past 90 days', 'ALL': 'All recorded history' };
+const rangeDays = { '7D': 7, '30D': 30, '3M': 90 };
+
+function historyTime(row) {
+  const api = Date.parse(row.api);
+  return Number.isFinite(api) ? api : Date.parse(row.checked);
+}
+
+function periodRows(now = Date.now()) {
+  const cutoff = selectedRange === 'ALL' ? -Infinity : now - rangeDays[selectedRange] * 86400000;
+  return fuelRows.filter(row => {
+    const time = historyTime(row);
+    return time >= cutoff && time <= now && Number.isFinite(row.price) && row.price > 0 && row.price < 900;
+  });
+}
+
+function assessmentMarkup(fuel, label, priceId, rows) {
+  const samples = rows.filter(row => row.fuel === fuel);
+  const currentText = $(priceId).textContent;
+  const current = parseFloat(currentText);
+  const prices = samples.map(row => row.price);
+  const low = prices.length ? Math.min(...prices) : null;
+  const high = prices.length ? Math.max(...prices) : null;
+  const avg = prices.length ? prices.reduce((a, b) => a + b, 0) / prices.length : null;
+  let badge = 'Not enough history', tone = '', detail = 'More recorded prices are needed for a comparison.';
+  if (!Number.isFinite(current)) {
+    badge = currentText === 'Unavailable' ? 'Unavailable' : 'Current price unavailable';
+    detail = 'Historical statistics remain available when recorded.';
+  } else if (!samples.length) {
+    detail = 'No recorded prices in this period. Try a longer range.';
+  } else if (new Set(samples.map(historyTime)).size >= 2) {
+    const position = high === low ? null : (current - low) / (high - low);
+    badge = position === null ? (current < low ? 'Cheap' : current > high ? 'Expensive' : 'Steady') : position <= 0.25 ? 'Cheap' : position >= 0.75 ? 'Expensive' : 'Average';
+    tone = badge.toLowerCase();
+    const difference = current - low;
+    detail = Math.abs(difference) < 0.05 ? 'Currently at the recorded period low.' : num(Math.abs(difference), 1) + 'c ' + (difference > 0 ? 'above' : 'below') + ' the recorded period low.';
+  }
+  const value = n => n === null ? '—' : num(n, 1);
+  // Only fixed labels and validated numbers are included in this markup.
+  const displayPrice = Number.isFinite(current) ? num(current, 1) + ' c/L' : currentText === 'Unavailable' ? 'Unavailable' : '—';
+  return '<section class="card"><h2>' + label + '</h2><strong class="fuel-current">' + displayPrice + '</strong><span class="fuel-badge ' + tone + '">' + badge + '</span><p class="muted">' + detail + '</p><dl><div><dt>Low · c/L</dt><dd>' + value(low) + '</dd></div><div><dt>Average · c/L</dt><dd>' + value(avg) + '</dd></div><div><dt>High · c/L</dt><dd>' + value(high) + '</dd></div></dl><p class="muted">' + samples.length + ' logged price' + (samples.length === 1 ? '' : 's') + ' in this period.</p></section>';
+}
+
+function renderKuttabul() {
+  if ($('kuttabulDashboard').classList.contains('hidden')) return;
+  const rows = periodRows();
+  $('kuttabulUpdated').textContent = $('fuelUpdated').textContent;
+  $('kuttabulPeriod').textContent = rangeNames[selectedRange] + ' · graph shows recorded points within this period';
+  $('kuttabulStats').innerHTML = assessmentMarkup('Diesel', 'Diesel', 'dieselPrice', rows) + assessmentMarkup('U91', 'Unleaded 91', 'u91Price', rows);
+  FT.drawKuttabulChart(rows);
+}
+
+document.querySelectorAll('[data-fuel-range]').forEach(button => {
+  button.addEventListener('click', () => {
+    selectedRange = button.dataset.fuelRange;
+    document.querySelectorAll('[data-fuel-range]').forEach(item => item.setAttribute('aria-pressed', String(item === button)));
+    renderKuttabul();
+  });
+});
+
+$('refreshKuttabul').addEventListener('click', async () => {
+  const button = $('refreshKuttabul');
+  button.disabled = true;
+  try { await loadFuel(); } finally { button.disabled = false; }
+});
 
 /* --------------------
    PUBLIC INTERFACE
