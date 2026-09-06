@@ -87,6 +87,18 @@
     </section>
 
 
+    <section class="card" aria-labelledby="fleetTitle">
+      <div class="head"><h2 id="fleetTitle">Your fleet</h2></div>
+      <p id="fleetCoverage" class="muted"></p>
+      <div class="fleet-totals">
+        <div><span>Total fuel spend</span><strong id="fleetSpend">$0.00</strong></div>
+        <div><span>Litres purchased</span><strong id="fleetLitres">0 L</strong></div>
+        <div><span>Distance tracked</span><strong id="fleetDistance">0 km</strong></div>
+      </div>
+      <div id="fleetComparison" class="fleet-comparison"></div>
+      <p class="muted fleet-note">Fuel costs only, based on recorded fills. Rates use total fuel and distance, not an average of tank rates. Odometers use the highest reading recorded in fills or services.</p>
+    </section>
+
     <p class="muted">
       Choose a vehicle to view its dashboard or record a fill.
     </p>
@@ -285,6 +297,29 @@
 
     </section>
 
+
+    <!-- FUEL COSTS BY PERIOD -->
+    <section class="card" aria-labelledby="runningCostsTitle">
+      <div class="head fuel-history-head">
+        <h2 id="runningCostsTitle">Fuel costs by period</h2>
+        <div class="fuel-ranges" role="group" aria-label="Vehicle fuel cost period">
+          <button type="button" data-cost-period="month" aria-pressed="true">This month</button>
+          <button type="button" data-cost-period="year" aria-pressed="false">This year</button>
+          <button type="button" data-cost-period="all" aria-pressed="false">All time</button>
+        </div>
+      </div>
+      <div aria-live="polite">
+        <p id="costPeriodSummary" class="muted"></p>
+        <div class="period-totals">
+          <div><span>Fuel spend</span><strong id="periodSpend">$0.00</strong></div>
+          <div><span>Litres purchased</span><strong id="periodLitres">0 L</strong></div>
+          <div><span>Distance tracked</span><strong id="periodDistance">0 km</strong></div>
+          <div><span>Average economy</span><strong id="periodEconomy">—</strong></div>
+          <div><span>Fuel cost</span><strong id="periodFuelRate">—</strong></div>
+        </div>
+      </div>
+      <p class="muted fleet-note">Based on fill dates and recorded distance. Fuel only; servicing, insurance and other costs are not included.</p>
+    </section>
 
     <!-- PERFORMANCE -->
     <section class="card">

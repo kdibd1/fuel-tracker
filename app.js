@@ -667,7 +667,58 @@ async function uploadVehicle(v) {
    VEHICLE PICKER
 -------------------- */
 
+
+/* Aggregate recorded fills. Rates use totals, so short fills are not overweighted. */
+function vehicleOverview(v, entries = fills(v)) {
+  const valid = value => value !== null && value !== undefined && value !== '' && Number.isFinite(Number(value));
+  const result = { litres: 0, distance: 0, spend: 0, rateDistance: 0, rateSpend: 0, useDistance: 0, useLitres: 0, odometer: null, count: entries.length };
+  entries.forEach(f => {
+    const litres = valid(f.litres) && +f.litres > 0 ? +f.litres : null;
+    const distance = valid(f.distance) && +f.distance > 0 ? +f.distance : null;
+    const price = valid(f.price) && +f.price >= 0 ? +f.price : null;
+    if (litres !== null) result.litres += litres;
+    if (distance !== null) result.distance += distance;
+    if (litres !== null && price !== null) result.spend += litres * price;
+    if (litres !== null && distance !== null) {
+      result.useLitres += litres; result.useDistance += distance;
+      if (price !== null) { result.rateSpend += litres * price; result.rateDistance += distance; }
+    }
+  });
+  [...fills(v), ...services(v)].forEach(entry => {
+    if (valid(entry.odometer) && +entry.odometer >= 0) result.odometer = Math.max(result.odometer ?? 0, +entry.odometer);
+  });
+  result.use = result.useDistance > 0 ? result.useLitres / result.useDistance * 100 : null;
+  result.rate = result.rateDistance > 0 ? result.rateSpend / result.rateDistance * 100 : null;
+  return result;
+}
+
+function vehicleOverviewMarkup(v) {
+  const info = vehicleOverview(v);
+  return '<span class="vehicle-overview"><span>' + (info.use === null ? '— L/100 km' : num(info.use, 1) + ' L/100 km') + ' · ' + (info.rate === null ? '— /100 km' : money.format(info.rate) + '/100 km') + '</span><span>' + (info.odometer === null ? 'No odometer recorded' : 'Odo ' + num(info.odometer, 0) + ' km') + '</span></span>';
+}
+
+function renderFleetOverview() {
+  const records = data.vehicles.map(v => ({ vehicle: v, ...vehicleOverview(v) }));
+  const total = records.reduce((sum, r) => ({litres: sum.litres + r.litres, distance: sum.distance + r.distance, spend: sum.spend + r.spend, count: sum.count + r.count}), {litres:0,distance:0,spend:0,count:0});
+  $('fleetSpend').textContent = money.format(total.spend);
+  $('fleetLitres').textContent = num(total.litres, 1) + ' L';
+  $('fleetDistance').textContent = num(total.distance, 1) + ' km';
+  $('fleetCoverage').textContent = records.length + ' vehicle' + (records.length === 1 ? '' : 's') + ' · ' + total.count + ' recorded fill' + (total.count === 1 ? '' : 's') + ' · all time';
+  const ranked = records.filter(r => r.rate !== null);
+  if (ranked.length < 2) {
+    $('fleetComparison').innerHTML = '<p class="muted">Record fills with distance, litres and price for at least two vehicles to compare fuel costs.</p>';
+    return;
+  }
+  // Compare to the displayed cent precision, and show every tied vehicle.
+  const cents = ranked.map(r => Math.round(r.rate * 100));
+  const low = Math.min(...cents), high = Math.max(...cents);
+  const names = target => ranked.filter(r => Math.round(r.rate * 100) === target).map(r => esc(r.vehicle.rego + (r.vehicle.nickname ? ' · ' + r.vehicle.nickname : ''))).join(', ');
+  const card = (label, target) => '<div><span>' + label + '</span><strong>' + money.format(target / 100) + '/100 km</strong><p>' + names(target) + '</p></div>';
+  $('fleetComparison').innerHTML = low === high ? card('Equal recorded fuel cost', low) : card('Lowest fuel cost', low) + card('Highest fuel cost', high);
+}
+
 function picker() {
+  renderFleetOverview();
   activeId = null;
 
   $('kuttabulDashboard').classList.add('hidden');
@@ -719,6 +770,8 @@ function picker() {
             ${fills(v).length}
             fills
           </span>
+
+          ${vehicleOverviewMarkup(v)}
 
           ${serviceReminderMarkup(v, true)}
 
@@ -1506,6 +1559,30 @@ $('serviceHistory').onclick =
    VEHICLE DASHBOARD
 -------------------- */
 
+
+let costPeriod = 'month';
+function renderRunningCosts() {
+  const v = active();
+  if (!v) return;
+  const end = today();
+  const start = costPeriod === 'month' ? end.slice(0, 7) + '-01' : end.slice(0, 4) + '-01-01';
+  const entries = fills(v).filter(f => costPeriod === 'all' || (typeof f.date === 'string' && f.date >= start && f.date <= end));
+  const info = vehicleOverview(v, entries);
+  $('periodSpend').textContent = money.format(info.spend);
+  $('periodLitres').textContent = num(info.litres, 1) + ' L';
+  $('periodDistance').textContent = num(info.distance, 1) + ' km';
+  $('periodEconomy').textContent = info.use === null ? '—' : num(info.use, 1) + ' L/100 km';
+  $('periodFuelRate').textContent = info.rate === null ? '—' : money.format(info.rate) + '/100 km';
+  $('costPeriodSummary').textContent = (costPeriod === 'all' ? 'All recorded fills' : dateFmt(start) + ' – ' + dateFmt(end)) + ' · ' + entries.length + ' fill' + (entries.length === 1 ? '' : 's') + (entries.length ? '' : ' · No fills recorded for this period');
+}
+document.querySelectorAll('[data-cost-period]').forEach(button => {
+  button.addEventListener('click', () => {
+    costPeriod = button.dataset.costPeriod;
+    document.querySelectorAll('[data-cost-period]').forEach(item => item.setAttribute('aria-pressed', String(item === button)));
+    renderRunningCosts();
+  });
+});
+
 function render() {
   const v =
     active();
@@ -1513,6 +1590,8 @@ function render() {
   if (!v) {
     return;
   }
+
+  renderRunningCosts();
 
   const fs =
     fills(v);
@@ -1993,7 +2072,7 @@ $('serviceSixMonths').addEventListener('click', () => {
 
 // Refresh reminders after midnight or returning to an app left open.
 function refreshServiceReminders() {
-  if (!$('dashboard').classList.contains('hidden')) renderServices();
+  if (!$('dashboard').classList.contains('hidden')) { renderServices(); renderRunningCosts(); }
   document.querySelectorAll('.vehicle-tile[data-id]').forEach(tile => {
     const v = data.vehicles.find(item => item.id === tile.dataset.id);
     const reminder = tile.querySelector('.service-reminder');
