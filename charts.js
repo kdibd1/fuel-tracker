@@ -7,6 +7,7 @@
  * Owns:
  * - vehicle consumption chart
  * - Kuttabul fuel price chart
+ * - fuel graph hover/tap interaction
  */
 
 const FT =
@@ -24,9 +25,9 @@ const num =
     Number(n).toFixed(d));
 
 
-/* --------------------
-   GENERIC LINE CHART
--------------------- */
+/* =========================================================
+   GENERIC VEHICLE LINE CHART
+========================================================= */
 
 function lineChart(
   id,
@@ -279,12 +280,10 @@ function lineChart(
           )
         : [
             0,
-
             Math.floor(
               (vals.length - 1) /
               2
             ),
-
             vals.length - 1
           ];
 
@@ -303,55 +302,493 @@ function lineChart(
 }
 
 
-/* --------------------
+/* =========================================================
+   KUTTABUL FUEL GRAPH STATE
+========================================================= */
+
+const fuelChartState = {
+  rows: [],
+  points: [],
+  selectedKey: null,
+  hoverKey: null
+};
+
+
+/* =========================================================
+   DATE / TIME HELPERS
+========================================================= */
+
+function rowTime(row) {
+  /*
+   * api_time_utc is preferred because
+   * it represents the price timestamp
+   * supplied by the fuel-price feed.
+   *
+   * checked_utc is only a fallback.
+   */
+  const raw =
+    row.api ||
+    row.checked;
+
+  const d =
+    new Date(raw);
+
+  return Number.isNaN(
+    d.getTime()
+  )
+    ? null
+    : d;
+}
+
+function pointKey(row) {
+  return [
+    row.fuel,
+    row.api || row.checked || '',
+    row.price
+  ].join('|');
+}
+
+function shortDate(date) {
+  return date.toLocaleDateString(
+    'en-AU',
+    {
+      timeZone:
+        'Australia/Brisbane',
+
+      day:
+        'numeric',
+
+      month:
+        'short'
+    }
+  );
+}
+
+function exactDateTime(date) {
+  return date.toLocaleString(
+    'en-AU',
+    {
+      timeZone:
+        'Australia/Brisbane',
+
+      day:
+        'numeric',
+
+      month:
+        'short',
+
+      year:
+        'numeric',
+
+      hour:
+        'numeric',
+
+      minute:
+        '2-digit'
+    }
+  );
+}
+
+
+/* =========================================================
+   FIND NEAREST INTERACTIVE POINT
+========================================================= */
+
+function nearestFuelPoint(
+  x,
+  y,
+  maxDistance = 18
+) {
+  let best = null;
+  let bestDistance =
+    maxDistance;
+
+  for (
+    const p of
+    fuelChartState.points
+  ) {
+    const dx =
+      p.x - x;
+
+    const dy =
+      p.y - y;
+
+    const distance =
+      Math.sqrt(
+        dx * dx +
+        dy * dy
+      );
+
+    if (
+      distance <=
+      bestDistance
+    ) {
+      best =
+        p;
+
+      bestDistance =
+        distance;
+    }
+  }
+
+  return best;
+}
+
+
+/* =========================================================
+   CANVAS POINTER POSITION
+========================================================= */
+
+function canvasPosition(
+  canvas,
+  event
+) {
+  const rect =
+    canvas
+      .getBoundingClientRect();
+
+  return {
+    x:
+      event.clientX -
+      rect.left,
+
+    y:
+      event.clientY -
+      rect.top
+  };
+}
+
+
+/* =========================================================
+   BIND FUEL GRAPH INTERACTION
+========================================================= */
+
+function bindFuelChartEvents(
+  canvas
+) {
+  if (
+    canvas.dataset
+      .fuelEventsBound ===
+    'true'
+  ) {
+    return;
+  }
+
+  canvas.dataset
+    .fuelEventsBound =
+    'true';
+
+
+  /*
+   * Laptop / mouse:
+   * hover over a point.
+   */
+  canvas.addEventListener(
+    'pointermove',
+    event => {
+      if (
+        event.pointerType &&
+        event.pointerType !==
+          'mouse'
+      ) {
+        return;
+      }
+
+      const pos =
+        canvasPosition(
+          canvas,
+          event
+        );
+
+      const p =
+        nearestFuelPoint(
+          pos.x,
+          pos.y,
+          15
+        );
+
+      const key =
+        p
+          ? p.key
+          : null;
+
+      if (
+        key !==
+        fuelChartState.hoverKey
+      ) {
+        fuelChartState.hoverKey =
+          key;
+
+        drawFuelChart(
+          fuelChartState.rows
+        );
+      }
+
+      canvas.style.cursor =
+        p
+          ? 'pointer'
+          : 'default';
+    }
+  );
+
+
+  canvas.addEventListener(
+    'pointerleave',
+    event => {
+      if (
+        event.pointerType &&
+        event.pointerType !==
+          'mouse'
+      ) {
+        return;
+      }
+
+      if (
+        fuelChartState.hoverKey
+      ) {
+        fuelChartState.hoverKey =
+          null;
+
+        drawFuelChart(
+          fuelChartState.rows
+        );
+      }
+
+      canvas.style.cursor =
+        'default';
+    }
+  );
+
+
+  /*
+   * Phone:
+   * tap a point.
+   *
+   * Laptop:
+   * click locks the point
+   * on screen as well.
+   */
+  canvas.addEventListener(
+    'pointerup',
+    event => {
+      const pos =
+        canvasPosition(
+          canvas,
+          event
+        );
+
+      const p =
+        nearestFuelPoint(
+          pos.x,
+          pos.y,
+          20
+        );
+
+      if (p) {
+        fuelChartState.selectedKey =
+          p.key;
+      } else {
+        fuelChartState.selectedKey =
+          null;
+      }
+
+      drawFuelChart(
+        fuelChartState.rows
+      );
+    }
+  );
+}
+
+
+/* =========================================================
+   TOOLTIP
+========================================================= */
+
+function drawFuelTooltip(
+  ctx,
+  point,
+  w,
+  h
+) {
+  if (!point) {
+    return;
+  }
+
+  const title =
+    `${point.row.fuel} — ` +
+    `${num(
+      point.row.price,
+      1
+    )} c/L`;
+
+  const time =
+    exactDateTime(
+      point.time
+    );
+
+  ctx.font =
+    '600 13px system-ui, sans-serif';
+
+  const titleWidth =
+    ctx.measureText(
+      title
+    ).width;
+
+  ctx.font =
+    '12px system-ui, sans-serif';
+
+  const timeWidth =
+    ctx.measureText(
+      time
+    ).width;
+
+  const boxWidth =
+    Math.max(
+      titleWidth,
+      timeWidth
+    ) + 24;
+
+  const boxHeight =
+    56;
+
+  let boxX =
+    point.x -
+    boxWidth / 2;
+
+  let boxY =
+    point.y -
+    boxHeight -
+    16;
+
+
+  /*
+   * Keep tooltip inside chart.
+   */
+  boxX =
+    Math.max(
+      6,
+      Math.min(
+        boxX,
+        w -
+        boxWidth -
+        6
+      )
+    );
+
+  if (
+    boxY < 6
+  ) {
+    boxY =
+      point.y + 16;
+  }
+
+  if (
+    boxY +
+    boxHeight >
+    h - 4
+  ) {
+    boxY =
+      h -
+      boxHeight -
+      4;
+  }
+
+
+  /*
+   * Tooltip box.
+   */
+  ctx.fillStyle =
+    'rgba(7,16,29,.96)';
+
+  ctx.strokeStyle =
+    point.stroke;
+
+  ctx.lineWidth =
+    1.5;
+
+  ctx.beginPath();
+
+  if (
+    typeof ctx.roundRect ===
+    'function'
+  ) {
+    ctx.roundRect(
+      boxX,
+      boxY,
+      boxWidth,
+      boxHeight,
+      8
+    );
+  } else {
+    ctx.rect(
+      boxX,
+      boxY,
+      boxWidth,
+      boxHeight
+    );
+  }
+
+  ctx.fill();
+  ctx.stroke();
+
+
+  /*
+   * Tooltip title.
+   */
+  ctx.fillStyle =
+    '#ffffff';
+
+  ctx.font =
+    '600 13px system-ui, sans-serif';
+
+  ctx.textAlign =
+    'left';
+
+  ctx.fillText(
+    title,
+    boxX + 12,
+    boxY + 22
+  );
+
+
+  /*
+   * Exact Queensland
+   * date + time.
+   */
+  ctx.fillStyle =
+    'rgba(255,255,255,.68)';
+
+  ctx.font =
+    '12px system-ui, sans-serif';
+
+  ctx.fillText(
+    time,
+    boxX + 12,
+    boxY + 42
+  );
+}
+
+
+/* =========================================================
    FUEL PRICE CHART
--------------------- */
+========================================================= */
 
 function drawFuelChart(
   rows
 ) {
-  const valid =
-    rows.filter(
-      x =>
-        Number.isFinite(
-          x.price
-        ) &&
-        x.price > 0 &&
-        x.price < 900
-    );
-
-  const diesel =
-    valid
-      .filter(
-        x =>
-          x.fuel ===
-          'Diesel'
-      )
-      .slice(-30);
-
-  const u91 =
-    valid
-      .filter(
-        x =>
-          x.fuel ===
-          'U91'
-      )
-      .slice(-30);
-
-  const all = [
-    ...diesel.map(
-      x => x.price
-    ),
-
-    ...u91.map(
-      x => x.price
-    )
-  ];
+  fuelChartState.rows =
+    Array.isArray(rows)
+      ? rows.slice()
+      : [];
 
   const c =
     $('fuelChart');
 
-  if (!c) return;
+  if (!c) {
+    return;
+  }
+
+  bindFuelChartEvents(c);
 
   const ctx =
     c.getContext('2d');
@@ -373,7 +810,7 @@ function drawFuelChart(
 
   const h =
     Math.max(
-      200,
+      220,
       Math.floor(
         rect.height || 240
       )
@@ -401,7 +838,84 @@ function drawFuelChart(
     h
   );
 
-  if (!all.length) {
+
+  /* --------------------
+     CLEAN + SORT ROWS
+  -------------------- */
+
+  const valid =
+    fuelChartState.rows
+      .map(row => ({
+        row,
+        time:
+          rowTime(row)
+      }))
+      .filter(
+        x =>
+          x.time &&
+          (
+            x.row.fuel ===
+              'Diesel' ||
+            x.row.fuel ===
+              'U91'
+          ) &&
+          Number.isFinite(
+            x.row.price
+          ) &&
+          x.row.price > 0 &&
+          x.row.price < 900
+      )
+      .sort(
+        (a, b) =>
+          a.time -
+          b.time
+      );
+
+
+  /*
+   * Preserve roughly the same
+   * amount of history as before:
+   * latest 30 points per fuel.
+   */
+  const diesel =
+    valid
+      .filter(
+        x =>
+          x.row.fuel ===
+          'Diesel'
+      )
+      .slice(-30);
+
+  const u91 =
+    valid
+      .filter(
+        x =>
+          x.row.fuel ===
+          'U91'
+      )
+      .slice(-30);
+
+  const shown =
+    [
+      ...diesel,
+      ...u91
+    ]
+      .sort(
+        (a, b) =>
+          a.time -
+          b.time
+      );
+
+
+  fuelChartState.points =
+    [];
+
+
+  /* --------------------
+     EMPTY GRAPH
+  -------------------- */
+
+  if (!shown.length) {
     ctx.fillStyle =
       'rgba(255,255,255,.55)';
 
@@ -420,42 +934,136 @@ function drawFuelChart(
     return;
   }
 
+
+  /* --------------------
+     GRAPH DIMENSIONS
+  -------------------- */
+
   const pad = {
-    l: 48,
+    l: 50,
     r: 18,
-    t: 22,
-    b: 38
+    t: 26,
+    b: 42
   };
 
-  let min =
-    Math.min(...all);
-
-  let max =
-    Math.max(...all);
-
-  if (min === max) {
-    min -= 5;
-    max += 5;
-  }
-
-  const range =
-    max - min;
-
-  min -= range * 0.15;
-  max += range * 0.15;
-
   const innerW =
-    w - pad.l - pad.r;
+    w -
+    pad.l -
+    pad.r;
 
   const innerH =
-    h - pad.t - pad.b;
+    h -
+    pad.t -
+    pad.b;
+
+
+  /* --------------------
+     PRICE RANGE
+  -------------------- */
+
+  const prices =
+    shown.map(
+      x => x.row.price
+    );
+
+  let minPrice =
+    Math.min(...prices);
+
+  let maxPrice =
+    Math.max(...prices);
+
+  if (
+    minPrice ===
+    maxPrice
+  ) {
+    minPrice -= 5;
+    maxPrice += 5;
+  }
+
+  const priceRange =
+    maxPrice -
+    minPrice;
+
+  minPrice -=
+    priceRange *
+    0.15;
+
+  maxPrice +=
+    priceRange *
+    0.15;
+
+
+  /* --------------------
+     SHARED TIME RANGE
+  -------------------- */
+
+  let minTime =
+    Math.min(
+      ...shown.map(
+        x =>
+          x.time.getTime()
+      )
+    );
+
+  let maxTime =
+    Math.max(
+      ...shown.map(
+        x =>
+          x.time.getTime()
+      )
+    );
+
+  if (
+    minTime ===
+    maxTime
+  ) {
+    minTime -=
+      60 * 60 * 1000;
+
+    maxTime +=
+      60 * 60 * 1000;
+  }
+
+
+  /*
+   * Both Diesel and U91 now
+   * use THIS same X scale.
+   */
+  const x =
+    time =>
+      pad.l +
+      (
+        (
+          time.getTime() -
+          minTime
+        ) /
+        (
+          maxTime -
+          minTime
+        )
+      ) *
+      innerW;
 
   const y =
-    v =>
+    price =>
       pad.t +
-      (max - v) /
-      (max - min) *
+      (
+        maxPrice -
+        price
+      ) /
+      (
+        maxPrice -
+        minPrice
+      ) *
       innerH;
+
+
+  /* =====================================================
+     Y GRID / PRICE LABELS
+  ===================================================== */
+
+  ctx.lineWidth =
+    1;
 
   ctx.strokeStyle =
     'rgba(255,255,255,.10)';
@@ -479,9 +1087,12 @@ function drawFuelChart(
       innerH *
       i / 4;
 
-    const val =
-      max -
-      (max - min) *
+    const price =
+      maxPrice -
+      (
+        maxPrice -
+        minPrice
+      ) *
       i / 4;
 
     ctx.beginPath();
@@ -499,40 +1110,80 @@ function drawFuelChart(
     ctx.stroke();
 
     ctx.fillText(
-      num(val, 1),
+      num(price, 1),
       pad.l - 7,
       yy + 4
     );
   }
 
+
+  /* =====================================================
+     X AXIS DATE LABELS
+  ===================================================== */
+
+  const timeLabels = [
+    minTime,
+    minTime +
+      (
+        maxTime -
+        minTime
+      ) / 2,
+    maxTime
+  ];
+
+  ctx.fillStyle =
+    'rgba(255,255,255,.48)';
+
+  ctx.font =
+    '10px system-ui, sans-serif';
+
+  timeLabels.forEach(
+    (timeValue, i) => {
+      const date =
+        new Date(
+          timeValue
+        );
+
+      const xx =
+        pad.l +
+        innerW *
+        i / 2;
+
+      if (i === 0) {
+        ctx.textAlign =
+          'left';
+      } else if (
+        i === 2
+      ) {
+        ctx.textAlign =
+          'right';
+      } else {
+        ctx.textAlign =
+          'center';
+      }
+
+      ctx.fillText(
+        shortDate(date),
+        xx,
+        h - 12
+      );
+    }
+  );
+
+
+  /* =====================================================
+     DRAW ONE FUEL SERIES
+  ===================================================== */
+
   function series(
     seriesRows,
-    stroke,
-    label,
-    labelX
+    stroke
   ) {
     if (!seriesRows.length) {
       return;
     }
 
-    const x =
-      i =>
-        pad.l +
-        (
-          seriesRows.length === 1
-            ? innerW / 2
-            : i /
-              (
-                seriesRows.length -
-                1
-              ) *
-              innerW
-        );
-
     ctx.strokeStyle =
-      stroke;
-
-    ctx.fillStyle =
       stroke;
 
     ctx.lineWidth =
@@ -547,16 +1198,24 @@ function drawFuelChart(
     ctx.beginPath();
 
     seriesRows.forEach(
-      (row, i) => {
+      (item, i) => {
+        const xx =
+          x(item.time);
+
+        const yy =
+          y(
+            item.row.price
+          );
+
         if (i === 0) {
           ctx.moveTo(
-            x(i),
-            y(row.price)
+            xx,
+            yy
           );
         } else {
           ctx.lineTo(
-            x(i),
-            y(row.price)
+            xx,
+            yy
           );
         }
       }
@@ -564,14 +1223,60 @@ function drawFuelChart(
 
     ctx.stroke();
 
+
+    /*
+     * Store actual coordinates
+     * so pointer/tap detection
+     * knows where every point is.
+     */
     seriesRows.forEach(
-      (row, i) => {
+      item => {
+        const xx =
+          x(item.time);
+
+        const yy =
+          y(
+            item.row.price
+          );
+
+        const key =
+          pointKey(
+            item.row
+          );
+
+        fuelChartState
+          .points
+          .push({
+            x:
+              xx,
+
+            y:
+              yy,
+
+            key,
+
+            row:
+              item.row,
+
+            time:
+              item.time,
+
+            stroke
+          });
+
+
+        /*
+         * Normal point.
+         */
+        ctx.fillStyle =
+          stroke;
+
         ctx.beginPath();
 
         ctx.arc(
-          x(i),
-          y(row.price),
-          3,
+          xx,
+          yy,
+          3.5,
           0,
           Math.PI * 2
         );
@@ -579,39 +1284,131 @@ function drawFuelChart(
         ctx.fill();
       }
     );
-
-    ctx.font =
-      '11px system-ui, sans-serif';
-
-    ctx.textAlign =
-      'left';
-
-    ctx.fillText(
-      label,
-      labelX,
-      14
-    );
   }
+
 
   series(
     diesel,
-    '#31d17c',
-    'Diesel',
-    pad.l
+    '#31d17c'
   );
 
   series(
     u91,
-    '#5da9ff',
-    'U91',
-    pad.l + 58
+    '#5da9ff'
   );
+
+
+  /* =====================================================
+     ACTIVE / SELECTED POINT
+  ===================================================== */
+
+  const activeKey =
+    fuelChartState
+      .selectedKey ||
+    fuelChartState
+      .hoverKey;
+
+  const activePoint =
+    activeKey
+      ? fuelChartState
+          .points
+          .find(
+            p =>
+              p.key ===
+              activeKey
+          )
+      : null;
+
+  if (activePoint) {
+
+    /*
+     * Vertical reference line.
+     */
+    ctx.strokeStyle =
+      'rgba(255,255,255,.20)';
+
+    ctx.lineWidth =
+      1;
+
+    ctx.setLineDash(
+      [4, 4]
+    );
+
+    ctx.beginPath();
+
+    ctx.moveTo(
+      activePoint.x,
+      pad.t
+    );
+
+    ctx.lineTo(
+      activePoint.x,
+      h - pad.b
+    );
+
+    ctx.stroke();
+
+    ctx.setLineDash([]);
+
+
+    /*
+     * Highlight ring.
+     */
+    ctx.fillStyle =
+      '#07101d';
+
+    ctx.strokeStyle =
+      activePoint.stroke;
+
+    ctx.lineWidth =
+      3;
+
+    ctx.beginPath();
+
+    ctx.arc(
+      activePoint.x,
+      activePoint.y,
+      7,
+      0,
+      Math.PI * 2
+    );
+
+    ctx.fill();
+    ctx.stroke();
+
+
+    /*
+     * Centre of selected point.
+     */
+    ctx.fillStyle =
+      activePoint.stroke;
+
+    ctx.beginPath();
+
+    ctx.arc(
+      activePoint.x,
+      activePoint.y,
+      3,
+      0,
+      Math.PI * 2
+    );
+
+    ctx.fill();
+
+
+    drawFuelTooltip(
+      ctx,
+      activePoint,
+      w,
+      h
+    );
+  }
 }
 
 
-/* --------------------
+/* =========================================================
    PUBLIC INTERFACE
--------------------- */
+========================================================= */
 
 FT.lineChart =
   lineChart;
