@@ -424,7 +424,7 @@ async function sync() {
 
         api(
           `/service_entries?workspace=eq.${ws}` +
-          `&select=id,vehicle_id,service_date,odometer_km,note` +
+          `&select=id,vehicle_id,service_date,odometer_km,note,next_service_odometer_km,next_service_date` +
           `&order=service_date.desc,created_at.desc`
         )
       ]);
@@ -506,6 +506,9 @@ async function sync() {
 
               odometer:
                 +s.odometer_km,
+
+              nextServiceOdometer: s.next_service_odometer_km == null ? null : +s.next_service_odometer_km,
+              nextServiceDate: s.next_service_date || null,
 
               note:
                 s.note || ''
@@ -645,6 +648,9 @@ async function uploadVehicle(v) {
             odometer_km:
               s.odometer,
 
+            next_service_odometer_km: s.nextServiceOdometer ?? null,
+            next_service_date: s.nextServiceDate || null,
+
             note:
               s.note || null
           })
@@ -713,6 +719,8 @@ function picker() {
             ${fills(v).length}
             fills
           </span>
+
+          ${serviceReminderMarkup(v, true)}
 
           <em>Open →</em>
         </button>
@@ -1310,6 +1318,7 @@ const serviceForm =
 $('addService').onclick =
   () => {
     serviceForm.reset();
+    clearScheduleValidity();
 
     $('serviceDate').value =
       today();
@@ -1366,6 +1375,17 @@ serviceForm.onsubmit =
         .reportValidity();
     }
 
+    const nextServiceOdometer = $('nextServiceOdo').value === '' ? null : Number($('nextServiceOdo').value);
+    const nextServiceDate = $('nextServiceDate').value || null;
+    if (nextServiceOdometer !== null && (!Number.isFinite(nextServiceOdometer) || nextServiceOdometer <= odo)) {
+      $('nextServiceOdo').setCustomValidity('Enter a target higher than the odometer at this service.');
+      return serviceForm.reportValidity();
+    }
+    if (nextServiceDate && nextServiceDate <= date) {
+      $('nextServiceDate').setCustomValidity('Choose a date after this service date.');
+      return serviceForm.reportValidity();
+    }
+
     const s = {
       id:
         uid(),
@@ -1375,7 +1395,9 @@ serviceForm.onsubmit =
       odometer:
         odo,
 
-      note
+      note,
+      nextServiceOdometer,
+      nextServiceDate
     };
 
     if (
@@ -1411,6 +1433,9 @@ serviceForm.onsubmit =
 
         odometer_km:
           s.odometer,
+
+        next_service_odometer_km: s.nextServiceOdometer ?? null,
+        next_service_date: s.nextServiceDate || null,
 
         note:
           s.note || null
@@ -1805,6 +1830,8 @@ function renderServices() {
   const v =
     active();
 
+  $('serviceReminder').innerHTML = serviceReminderMarkup(v);
+
   const ss =
     services(v)
       .slice()
@@ -1890,6 +1917,8 @@ function renderServices() {
 
           </div>
 
+          <div class="entry-details">${esc(serviceTargets(s))}</div>
+
           ${
             s.note
               ? `
@@ -1909,6 +1938,70 @@ function renderServices() {
     ).join('');
 }
 
+
+
+/* Service schedules belong to the latest service, including a blank schedule.
+ * Older reminders never remain active after a newer service clears them. */
+function latestService(v) {
+  return services(v).slice().sort((a, b) =>
+    String(b.date).localeCompare(String(a.date)) || (b.odometer || 0) - (a.odometer || 0)
+  )[0];
+}
+
+function serviceTargets(s) {
+  const parts = [];
+  if (s.nextServiceOdometer != null) parts.push(num(s.nextServiceOdometer, 0) + ' km');
+  if (s.nextServiceDate) parts.push(dateFmt(s.nextServiceDate));
+  return parts.length ? 'Next service: ' + parts.join(' or ') + (parts.length > 1 ? ' · whichever comes first' : '') : 'No next service scheduled';
+}
+
+function serviceReminderMarkup(v, compact = false) {
+  const s = latestService(v);
+  if (!s || (s.nextServiceOdometer == null && !s.nextServiceDate)) {
+    return '<span class="service-reminder muted">No next service scheduled</span>';
+  }
+  const readings = [...fills(v), ...services(v)].map(item => item.odometer).filter(n => n !== null && n !== undefined && Number.isFinite(+n) && +n >= 0).map(Number);
+  const odometer = readings.length ? Math.max(...readings) : null;
+  const remaining = s.nextServiceOdometer != null && odometer !== null ? s.nextServiceOdometer - odometer : null;
+  const days = s.nextServiceDate ? Math.round((Date.parse(s.nextServiceDate + 'T00:00:00Z') - Date.parse(today() + 'T00:00:00Z')) / 86400000) : null;
+  const due = (remaining !== null && remaining <= 0) || (days !== null && days <= 0);
+  const parts = [];
+  if (remaining !== null) parts.push(remaining < 0 ? num(-remaining, 0) + ' km overdue' : remaining === 0 ? 'Mileage target reached' : num(remaining, 0) + ' km remaining');
+  else if (s.nextServiceOdometer != null) parts.push('Due at ' + num(s.nextServiceOdometer, 0) + ' km');
+  if (days !== null) parts.push(days < 0 ? (-days) + ' day' + (days === -1 ? '' : 's') + ' overdue' : days === 0 ? 'Due today' : days + ' day' + (days === 1 ? '' : 's') + ' remaining');
+  return '<span class="service-reminder' + (due ? ' service-due' : '') + '"><strong>' + (due ? '⚠ SERVICE DUE' : 'Next service') + '</strong><span>' + esc(parts.join(' · ')) + '</span>' + (compact ? '' : '<span>' + esc(serviceTargets(s)) + '</span>' + (remaining !== null ? '<small>Based on highest recorded odometer: ' + num(odometer, 0) + ' km. Update your odometer when recording a fill.</small>' : '')) + '</span>';
+}
+
+function clearScheduleValidity() {
+  $('nextServiceOdo').setCustomValidity('');
+  $('nextServiceDate').setCustomValidity('');
+}
+['nextServiceOdo', 'nextServiceDate', 'serviceDate', 'serviceOdo'].forEach(id => $(id).addEventListener('input', clearScheduleValidity));
+$('serviceForm').addEventListener('reset', clearScheduleValidity);
+
+$('serviceSixMonths').addEventListener('click', () => {
+  const source = $('serviceDate').value;
+  if (!source) { $('serviceDate').reportValidity(); return; }
+  const [year, month, day] = source.split('-').map(Number);
+  // Clamp month ends: 31 August + six months becomes the last day of February.
+  const target = new Date(Date.UTC(year, month - 1 + 6, 1));
+  const lastDay = new Date(Date.UTC(target.getUTCFullYear(), target.getUTCMonth() + 1, 0)).getUTCDate();
+  target.setUTCDate(Math.min(day, lastDay));
+  $('nextServiceDate').value = target.toISOString().slice(0, 10);
+  clearScheduleValidity();
+});
+
+// Refresh reminders after midnight or returning to an app left open.
+function refreshServiceReminders() {
+  if (!$('dashboard').classList.contains('hidden')) renderServices();
+  document.querySelectorAll('.vehicle-tile[data-id]').forEach(tile => {
+    const v = data.vehicles.find(item => item.id === tile.dataset.id);
+    const reminder = tile.querySelector('.service-reminder');
+    if (v && reminder) reminder.outerHTML = serviceReminderMarkup(v, true);
+  });
+}
+window.addEventListener('focus', refreshServiceReminders);
+setInterval(refreshServiceReminders, 60000);
 
 /* --------------------
    PUBLIC INTERFACE

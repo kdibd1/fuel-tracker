@@ -416,6 +416,7 @@
 
       </div>
 
+      <div id="serviceReminder" aria-live="polite"></div>
       <div id="serviceHistory"></div>
 
     </section>
@@ -483,6 +484,18 @@
         required
       >
     </label>
+
+    <fieldset class="service-schedule">
+      <legend>Next service <small>optional</small></legend>
+      <label>Due at odometer (km)
+        <input id="nextServiceOdo" type="number" min="0" step="1" placeholder="e.g. 320000">
+      </label>
+      <label>Due date
+        <input id="nextServiceDate" type="date">
+      </label>
+      <button id="serviceSixMonths" class="secondary small" type="button">6 months after service</button>
+      <p class="muted">Set either limit or both. A reminder becomes due when either is reached. Leave both blank to clear the schedule when this is the latest service.</p>
+    </fieldset>
 
     <label>
       Notes
