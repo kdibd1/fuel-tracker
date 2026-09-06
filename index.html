@@ -43,7 +43,7 @@
     <section class="card">
 
       <div class="head">
-        <h2>Kuttabul Road House</h2>
+        <h2><button id="openKuttabul" class="fuel-heading" type="button" aria-controls="kuttabulDashboard">Kuttabul Road House</button></h2>
 
         <button
           id="refreshFuel"
@@ -101,6 +101,20 @@
       class="vehicle-grid"
     ></div>
 
+  </section>
+
+
+  <!-- KUTTABUL DASHBOARD SHELL -->
+  <section id="kuttabulDashboard" class="hidden" aria-labelledby="kuttabulTitle">
+    <div class="vehicle-head">
+      <div class="identity">
+        <button id="backKuttabul" class="back" type="button" aria-label="Back to home">‹</button>
+        <div>
+          <h2 id="kuttabulTitle">Kuttabul Road House</h2>
+          <p>Fuel dashboard</p>
+        </div>
+      </div>
+    </div>
   </section>
 
 

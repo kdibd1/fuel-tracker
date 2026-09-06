@@ -664,6 +664,8 @@ async function uploadVehicle(v) {
 function picker() {
   activeId = null;
 
+  $('kuttabulDashboard').classList.add('hidden');
+
   $('dashboard')
     .classList
     .add('hidden');

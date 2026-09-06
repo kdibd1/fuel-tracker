@@ -29,6 +29,23 @@ const num =
 let fuelRows = [];
 
 
+/* Kuttabul shell navigation; the home graph stays in its original place. */
+$('openKuttabul').addEventListener('click', () => {
+  $('picker').classList.add('hidden');
+  $('kuttabulDashboard').classList.remove('hidden');
+  $('backKuttabul').focus({ preventScroll: true });
+  window.scrollTo(0, 0);
+});
+
+$('backKuttabul').addEventListener('click', () => {
+  FT.picker();
+  // Redraw at the visible size, including after a resize while away.
+  drawFuel();
+  $('openKuttabul').focus({ preventScroll: true });
+  window.scrollTo(0, 0);
+});
+
+
 /* --------------------
    LOAD FUEL DATA
 -------------------- */
