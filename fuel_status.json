@@ -1,15 +1,15 @@
 {
-  "checked_utc": "2026-09-18T02:29:29.051560+00:00",
+  "checked_utc": "2026-09-18T03:27:52.333544+00:00",
   "fuels": {
     "U91": {
-      "available": true,
-      "price_cents": 228.9,
-      "api_time_utc": "2026-09-17T23:37:56.78"
+      "available": false,
+      "price_cents": null,
+      "api_time_utc": "2026-09-18T03:03:24.373"
     },
     "Diesel": {
       "available": false,
       "price_cents": null,
-      "api_time_utc": "2026-09-17T23:37:56.78"
+      "api_time_utc": "2026-09-18T03:03:24.373"
     }
   }
 }
